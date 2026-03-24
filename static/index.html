@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatório de Microscopia</title>
+  <meta name="theme-color" content="#1a5f8a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Microscopia">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="15" fill="#1a5f8a" stroke="#e8f4f8" stroke-width="1"/>
+        <circle cx="16" cy="16" r="7" fill="none" stroke="#e8f4f8" stroke-width="2"/>
+        <circle cx="16" cy="16" r="2.5" fill="#e8f4f8"/>
+        <line x1="16" y1="1" x2="16" y2="8" stroke="#e8f4f8" stroke-width="1.5"/>
+        <line x1="16" y1="24" x2="16" y2="31" stroke="#e8f4f8" stroke-width="1.5"/>
+        <line x1="1" y1="16" x2="8" y2="16" stroke="#e8f4f8" stroke-width="1.5"/>
+        <line x1="24" y1="16" x2="31" y2="16" stroke="#e8f4f8" stroke-width="1.5"/>
+      </svg>
+      <div>
+        <span class="header-title">Relatório de Microscopia</span>
+        <span class="header-sub">Sistema de Laudos</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+<!-- MAIN CONTAINER -->
+<main class="container" id="mainContent">
+
+  <!-- CARD: DADOS DO PACIENTE -->
+  <section class="card">
+    <div class="card-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Dados do Paciente
+    </div>
+    <div class="card-body">
+      <div class="form-grid-2">
+        <div class="field">
+          <label for="paciente">Nome completo <span class="req">*</span></label>
+          <input type="text" id="paciente" placeholder="Nome da paciente" />
+        </div>
+        <div class="field">
+          <label for="dataNascimento">Data de nascimento <span class="req">*</span></label>
+          <input type="text" id="dataNascimento" placeholder="DD/MM/AAAA" maxlength="10" />
+        </div>
+        <div class="field">
+          <label for="dataColeta">Data da coleta <span class="req">*</span></label>
+          <input type="text" id="dataColeta" placeholder="DD/MM/AAAA" maxlength="10" />
+        </div>
+        <div class="field">
+          <label for="solicitante">Médico solicitante</label>
+          <input type="text" id="solicitante" placeholder="Dr(a). Nome" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CARD: UPLOAD DE IMAGENS -->
+  <section class="card">
+    <div class="card-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Upload de Imagens <span class="badge-count" id="imageCount">0/3</span>
+    </div>
+    <div class="card-body">
+      <div class="upload-zone" id="dropZone"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)"
+           onclick="document.getElementById('fileInput').click()">
+        <svg class="upload-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+        <p class="upload-title">Arraste imagens ou clique para selecionar</p>
+        <p class="upload-hint">JPG, PNG ou WEBP — máx. 20 MB por imagem — até 3 imagens</p>
+        <input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="handleFileSelect(event)" />
+      </div>
+
+      <div class="preview-strip" id="previewStrip" style="display:none">
+        <div class="preview-list" id="previewList"></div>
+      </div>
+
+      <label class="circular-toggle" id="circularToggle">
+        <input type="checkbox" id="circularCrop" onchange="renderPreviews()" />
+        <span class="circular-toggle-icon">⬜</span>
+        Aplicar corte quadrado (campo microscópico)
+      </label>
+
+    </div>
+  </section>
+
+  <!-- FORMULÁRIO DE LAUDO -->
+  <div id="resultsSection">
+
+    <!-- CARD: ESCORE DE NUGENT -->
+    <section class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Escore de Nugent
+        <span class="score-badge" id="nugentBadge">—</span>
+      </div>
+      <div class="card-body">
+        <div class="nugent-table">
+          <div class="nugent-header">
+            <span>Morfotipo</span><span>Descrição</span><span>Achado</span><span>Pontos</span>
+          </div>
+
+          <!-- Morfotipo A -->
+          <div class="nugent-row">
+            <span class="morfo-label morfo-a">A</span>
+            <span class="morfo-desc">
+              <strong>Lactobacillus</strong><br>
+              <small>Bastonetes gram-positivos grandes</small>
+            </span>
+            <span>
+              <select id="nugentA" onchange="updateNugentScore()" class="select-inline">
+                <option value="4+">4+ (&gt;30/campo)</option>
+                <option value="3+">3+ (5–30/campo)</option>
+                <option value="2+" selected>2+ (1–4/campo)</option>
+                <option value="1+">1+ (&lt;1/campo)</option>
+                <option value="ausente">Ausente</option>
+              </select>
+            </span>
+            <span class="pts-cell" id="ptsA">2</span>
+          </div>
+
+          <!-- Morfotipo B -->
+          <div class="nugent-row nugent-row-alt">
+            <span class="morfo-label morfo-b">B</span>
+            <span class="morfo-desc">
+              <strong>Gardnerella / Prevotella</strong><br>
+              <small>Cocobacilos gram-variáveis pequenos</small>
+            </span>
+            <span>
+              <select id="nugentB" onchange="updateNugentScore()" class="select-inline">
+                <option value="ausente" selected>Ausente</option>
+                <option value="1+">1+ (&lt;1/campo)</option>
+                <option value="2+">2+ (1–4/campo)</option>
+                <option value="3+">3+ (5–30/campo)</option>
+                <option value="4+">4+ (&gt;30/campo)</option>
+              </select>
+            </span>
+            <span class="pts-cell" id="ptsB">0</span>
+          </div>
+
+          <!-- Morfotipo C -->
+          <div class="nugent-row">
+            <span class="morfo-label morfo-c">C</span>
+            <span class="morfo-desc">
+              <strong>Mobiluncus</strong><br>
+              <small>Bastonetes curvos gram-variáveis</small>
+            </span>
+            <span>
+              <select id="nugentC" onchange="updateNugentScore()" class="select-inline">
+                <option value="ausente" selected>Ausente</option>
+                <option value="poucos">Poucos</option>
+                <option value="muitos">Muitos</option>
+              </select>
+            </span>
+            <span class="pts-cell" id="ptsC">0</span>
+          </div>
+
+          <!-- Total -->
+          <div class="nugent-total-row">
+            <span></span>
+            <span><strong>TOTAL</strong></span>
+            <span></span>
+            <span class="total-pts" id="nugentTotal">2<small>/10</small></span>
+          </div>
+        </div>
+
+        <div class="nugent-scale">
+          <div class="scale-item scale-normal"><span>0–3</span> Normal</div>
+          <div class="scale-item scale-inter"><span>4–6</span> Intermediária</div>
+          <div class="scale-item scale-vb"><span>7–10</span> Vaginose bacteriana</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD: CRITÉRIOS DE AMSEL -->
+    <section class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Critérios de Amsel
+        <span class="amsel-count" id="amselCount">0/4 positivos</span>
+      </div>
+      <div class="card-body">
+        <p class="amsel-rule">Vaginose bacteriana: ≥ 3 critérios positivos</p>
+
+        <div class="amsel-list">
+          <!-- Critério 1 -->
+          <label class="amsel-item" id="amselItem1">
+            <input type="checkbox" id="amselCorrimento" onchange="updateAmselCount()" />
+            <span class="amsel-check"></span>
+            <span class="amsel-text">
+              <strong>1. Corrimento vaginal</strong><br>
+              <small>Homogêneo, branco-acinzentado, aderente às paredes</small>
+            </span>
+          </label>
+
+          <!-- Critério 2 -->
+          <label class="amsel-item" id="amselItem2">
+            <input type="checkbox" id="amselPh" onchange="updateAmselCount()" />
+            <span class="amsel-check"></span>
+            <span class="amsel-text">
+              <strong>2. pH vaginal &gt; 4,5</strong><br>
+              <small>Medido com fita indicadora de pH</small>
+            </span>
+            <span class="ph-field" onclick="event.stopPropagation()">
+              <input type="text" id="amselPhValor" placeholder="ex: 5,0" maxlength="5" class="input-ph" />
+            </span>
+          </label>
+
+          <!-- Critério 3 -->
+          <label class="amsel-item" id="amselItem3">
+            <input type="checkbox" id="amselWhiff" onchange="updateAmselCount()" />
+            <span class="amsel-check"></span>
+            <span class="amsel-text">
+              <strong>3. Teste das aminas (Whiff test)</strong><br>
+              <small>Odor de peixe após adição de KOH 10%</small>
+            </span>
+          </label>
+
+          <!-- Critério 4 -->
+          <label class="amsel-item" id="amselItem4">
+            <input type="checkbox" id="amselClue" onchange="updateAmselCount()" />
+            <span class="amsel-check"></span>
+            <span class="amsel-text">
+              <strong>4. Clue cells ≥ 20% das células epiteliais</strong><br>
+              <small>Células epiteliais com bordas obscurecidas por bactérias aderidas</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="amsel-result" id="amselResult">
+          <span id="amselResultText">Insuficiente para diagnóstico de vaginose bacteriana</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD: OUTROS ACHADOS -->
+    <section class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Outros Achados Microscópicos
+      </div>
+      <div class="card-body">
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="polimorfonucleares">Polimorfonucleares (PMN)</label>
+            <select id="polimorfonucleares" class="select-field">
+              <option value="ausentes">Ausentes</option>
+              <option value="raros">Raros</option>
+              <option value="moderados">Moderados</option>
+              <option value="abundantes">Abundantes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="elementosFungicos">Elementos fúngicos</label>
+            <select id="elementosFungicos" class="select-field">
+              <option value="ausentes">Ausentes</option>
+              <option value="hifas">Hifas presentes</option>
+              <option value="esporos">Esporos presentes</option>
+              <option value="hifas e esporos">Hifas e esporos presentes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD: DESCRIÇÃO E CONCLUSÃO -->
+    <section class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Descrição e Conclusão
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label for="descricao">Descrição dos achados microscópicos</label>
+          <textarea id="descricao" rows="5" placeholder="Descreva os achados observados na microscopia..."></textarea>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="field">
+            <label for="floraType">Tipo de flora (classificação)</label>
+            <select id="floraType" class="select-field">
+              <option value="I">Flora Tipo I — Predomínio de Lactobacillus</option>
+              <option value="II">Flora Tipo II — Flora mista com Lactobacillus predominante</option>
+              <option value="III">Flora Tipo III — Flora mista sem Lactobacillus predominante</option>
+              <option value="IV">Flora Tipo IV — Ausência de Lactobacillus</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="conclusao">Conclusão</label>
+          <textarea id="conclusao" rows="4" placeholder="Conclusão do laudo..."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="observacoes">Observações (opcional)</label>
+          <textarea id="observacoes" rows="2" placeholder="Observações adicionais..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD: EXAMINADOR -->
+    <section class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Dados do Examinador
+      </div>
+      <div class="card-body">
+        <div class="form-grid-3">
+          <div class="field field-span-1">
+            <label for="examinador">Nome do examinador</label>
+            <input type="text" id="examinador" placeholder="Dr(a). Nome Completo" />
+          </div>
+          <div class="field">
+            <label for="crm">CRM / RQE</label>
+            <input type="text" id="crm" placeholder="CRM 00000 / RQE 00000" />
+          </div>
+          <div class="field">
+            <label for="dataAvaliacao">Data da avaliação</label>
+            <input type="text" id="dataAvaliacao" placeholder="DD/MM/AAAA" maxlength="10" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GENERATE PDF BUTTON -->
+    <div class="pdf-action-row">
+      <button class="btn btn-success btn-large" onclick="generatePDF()" id="pdfBtn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span id="pdfBtnText">Gerar Laudo PDF</span>
+        <span class="spinner" id="pdfSpinner" style="display:none"></span>
+      </button>
+      <p class="pdf-hint">O PDF será gerado e baixado automaticamente</p>
+    </div>
+
+  </div><!-- end resultsSection -->
+</main>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
