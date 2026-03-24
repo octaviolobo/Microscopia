@@ -162,20 +162,20 @@ async def generate_pdf(data: LaudoData):
 
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
-        rightMargin=2*cm, leftMargin=2*cm,
-        topMargin=1.5*cm, bottomMargin=2*cm
+        rightMargin=1.2*cm, leftMargin=1.2*cm,
+        topMargin=0.8*cm, bottomMargin=1*cm
     )
 
     def style(name, **kwargs):
-        base = ParagraphStyle(name, fontName='Helvetica', fontSize=10, leading=14, spaceAfter=3)
+        base = ParagraphStyle(name, fontName='Helvetica', fontSize=9, leading=12, spaceAfter=2)
         for k, v in kwargs.items():
             setattr(base, k, v)
         return base
 
-    title_s = style('T', fontSize=13, fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=8)
-    label_s = style('L', fontSize=10, fontName='Helvetica-Bold', textColor=CETRUS_BLUE, spaceAfter=4)
-    normal_s = style('N', fontSize=9, leading=13)
-    small_s = style('S', fontSize=7, fontName='Helvetica-Oblique', textColor=colors.grey, spaceAfter=2)
+    title_s = style('T', fontSize=11, fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=4)
+    label_s = style('L', fontSize=9, fontName='Helvetica-Bold', textColor=CETRUS_BLUE, spaceAfter=2)
+    normal_s = style('N', fontSize=8, leading=11)
+    small_s = style('S', fontSize=6.5, fontName='Helvetica-Oblique', textColor=colors.grey, spaceAfter=1)
     bold_s = style('B', fontSize=9, fontName='Helvetica-Bold')
     def b(t): return f"<b>{t}</b>"
     def yn(v): return "Positivo" if v else "Negativo"
@@ -184,10 +184,11 @@ async def generate_pdf(data: LaudoData):
 
     # Title
     story.append(Paragraph("RELATÓRIO DE MICROSCOPIA - CONTEÚDO VAGINAL", title_s))
-    story.append(HRFlowable(width="100%", thickness=2, color=CETRUS_BLUE))
-    story.append(Spacer(1, 0.4*cm))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=CETRUS_BLUE))
+    story.append(Spacer(1, 0.15*cm))
 
     # Patient data
+    cw = (A4[0] - 2.4*cm) / 2
     pt_data = [
         [Paragraph(f"{b('Paciente:')} {data.paciente}", normal_s),
          Paragraph(f"{b('Data de nascimento:')} {data.data_nascimento}", normal_s)],
@@ -196,16 +197,16 @@ async def generate_pdf(data: LaudoData):
         [Paragraph(f"{b('Material:')} Secreção vaginal", normal_s),
          Paragraph(f"{b('Método:')} Microscopia óptica (a fresco e coloração de Gram)", normal_s)],
     ]
-    pt = Table(pt_data, colWidths=[8.5*cm, 8.5*cm])
+    pt = Table(pt_data, colWidths=[cw, cw])
     pt.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
         ('LEFTPADDING', (0,0), (-1,-1), 0),
         ('RIGHTPADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(pt)
-    story.append(Spacer(1, 0.4*cm))
+    story.append(Spacer(1, 0.15*cm))
 
     # Images
     story.append(Paragraph("Achados microscópicos:", label_s))
@@ -216,12 +217,12 @@ async def generate_pdf(data: LaudoData):
             try:
                 if data.circular_crop:
                     circ_buf = make_square_crop(fp)
-                    img_size = 4.2*cm
+                    img_size = 3.5*cm
                     img = RLImage(circ_buf, width=img_size, height=img_size)
                 else:
                     with PILImage.open(fp) as pil_img:
                         w, h = pil_img.size
-                    max_w, max_h = 4.8*cm, 3.8*cm
+                    max_w, max_h = 4.0*cm, 3.2*cm
                     ratio = min(max_w/w, max_h/h)
                     img = RLImage(str(fp), width=w*ratio, height=h*ratio)
                 img_cells.append(img)
@@ -229,118 +230,115 @@ async def generate_pdf(data: LaudoData):
                 img_cells.append(Paragraph("", normal_s))
     while len(img_cells) < 3:
         img_cells.append(Paragraph("", normal_s))
-    img_table = Table([img_cells], colWidths=[5.5*cm, 5.5*cm, 5.5*cm])
+    icw = (A4[0] - 2.4*cm) / 3
+    img_table = Table([img_cells], colWidths=[icw, icw, icw])
     img_table.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(img_table)
-    story.append(Spacer(1, 0.4*cm))
+    story.append(Spacer(1, 0.15*cm))
 
     # Description
     story.append(Paragraph("Descrição dos achados microscópicos:", label_s))
     story.append(Paragraph(data.descricao, normal_s))
-    story.append(Spacer(1, 0.3*cm))
+    story.append(Spacer(1, 0.15*cm))
 
-    # Nugent
-    story.append(Paragraph("Escore de Nugent:", label_s))
+    tw = A4[0] - 2.4*cm
     nug_data = [
-        ['Morfotipo', 'Descrição', 'Achado', 'Pontos'],
-        ['A', 'Lactobacillus (bastonetes gram-positivos)', data.nugent_a_qty, str(data.nugent_a_pts)],
-        ['B', 'Gardnerella/Prevotella (cocobacilos gram-variáveis)', data.nugent_b_qty, str(data.nugent_b_pts)],
+        ['Morf.', 'Descrição', 'Achado', 'Pts'],
+        ['A', 'Lactobacillus (gram-positivos)', data.nugent_a_qty, str(data.nugent_a_pts)],
+        ['B', 'Gardnerella/Prevotella (gram-variáveis)', data.nugent_b_qty, str(data.nugent_b_pts)],
         ['C', 'Mobiluncus (bastonetes curvos)', data.nugent_c_qty, str(data.nugent_c_pts)],
         ['', f'TOTAL - {data.nugent_interpretacao}', '', str(data.nugent_total) + '/10'],
     ]
-    col_ws = [1.2*cm, 8.5*cm, 3.5*cm, 2*cm]
-    nt = Table(nug_data, colWidths=col_ws)
+    nug_cw = [1*cm, tw - 5.5*cm, 3*cm, 1.5*cm]
+    nt = Table(nug_data, colWidths=nug_cw)
     nt.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), CETRUS_BLUE),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
         ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('FONTSIZE', (0,0), (-1,-1), 7),
         ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor('#cccccc')),
         ('ROWBACKGROUNDS', (0,1), (-1,-2), [colors.white, CETRUS_MID]),
         ('BACKGROUND', (0,-1), (-1,-1), CETRUS_LIGHT),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('ALIGN', (1,0), (1,-1), 'LEFT'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
     ]))
+    story.append(Paragraph("Escore de Nugent:", label_s))
     story.append(nt)
-    story.append(Spacer(1, 0.4*cm))
+    story.append(Spacer(1, 0.15*cm))
 
-    # Amsel
-    story.append(Paragraph("Critérios de Amsel:", label_s))
     pos = sum([data.amsel_corrimento, data.amsel_ph, data.amsel_whiff, data.amsel_clue_cells])
     ph_label = "2. pH vaginal > 4,5"
     if data.amsel_ph_valor:
-        ph_label += f" (valor: {data.amsel_ph_valor})"
-    amsel_status = "Compativel com Vaginose Bacteriana" if pos >= 3 else "Insuficiente para Vaginose Bacteriana"
+        ph_label += f" ({data.amsel_ph_valor})"
+    amsel_status = "Compatível com VB" if pos >= 3 else "Insuficiente para VB"
     amsel_data = [
-        ['Critério', 'Resultado'],
-        ['1. Corrimento homogeneo branco-acinzentado', yn(data.amsel_corrimento)],
+        ['Critério de Amsel', 'Result.'],
+        ['1. Corrimento homogêneo branco-acinzentado', yn(data.amsel_corrimento)],
         [ph_label, yn(data.amsel_ph)],
-        ['3. Teste das aminas positivo (Whiff test)', yn(data.amsel_whiff)],
-        ['4. Clue cells >= 20% das celulas epiteliais', yn(data.amsel_clue_cells)],
-        [f'Total: {pos}/4 criterios positivos  ->  {amsel_status}', ''],
+        ['3. Teste das aminas (Whiff test)', yn(data.amsel_whiff)],
+        ['4. Clue cells >= 20% das células epiteliais', yn(data.amsel_clue_cells)],
+        [f'Total: {pos}/4  →  {amsel_status}', ''],
     ]
-    at = Table(amsel_data, colWidths=[13*cm, 4*cm])
+    at = Table(amsel_data, colWidths=[tw - 2.5*cm, 2.5*cm])
     at.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), CETRUS_BLUE),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
         ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('FONTSIZE', (0,0), (-1,-1), 7),
         ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor('#cccccc')),
         ('ROWBACKGROUNDS', (0,1), (-1,-2), [colors.white, CETRUS_MID]),
         ('BACKGROUND', (0,-1), (-1,-1), CETRUS_LIGHT),
         ('SPAN', (0,-1), (-1,-1)),
         ('ALIGN', (1,1), (1,-2), 'CENTER'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
     ]))
+    story.append(Paragraph("Critérios de Amsel:", label_s))
     story.append(at)
-    story.append(Spacer(1, 0.4*cm))
+    story.append(Spacer(1, 0.15*cm))
 
     # Conclusion
     story.append(Paragraph("Conclusão:", label_s))
     story.append(Paragraph(data.conclusao, normal_s))
     if data.observacoes:
-        story.append(Spacer(1, 0.2*cm))
-        story.append(Paragraph(f"<i>Observações: {data.observacoes}</i>", normal_s))
-    story.append(Spacer(1, 0.6*cm))
+        story.append(Paragraph(f"<i>Obs: {data.observacoes}</i>", normal_s))
+    story.append(Spacer(1, 0.2*cm))
 
     # References
-    story.append(Paragraph("<b><i>Referências bibliográficas:</i></b>", small_s))
     story.append(Paragraph(
-        "Nugent, R. P., Krohn, M. A., & Hillier, S. L. (1991). Reliability of diagnosing bacterial vaginosis is improved by a standardized method of Gram stain interpretation. <i>Journal of Clinical Microbiology, 29</i>(2), 297-301.",
+        "<b><i>Referências:</i></b> Nugent et al. (1991). <i>J Clin Microbiol, 29</i>(2), 297-301. | "
+        "Amsel et al. (1983). <i>Am J Med, 74</i>(1), 14-22.",
         small_s))
-    story.append(Paragraph(
-        "Amsel, R., et al. (1983). Nonspecific vaginitis: Diagnostic criteria and microbial and epidemiologic associations. <i>The American Journal of Medicine, 74</i>(1), 14-22.",
-        small_s))
-    story.append(Spacer(1, 0.8*cm))
+    story.append(Spacer(1, 0.3*cm))
 
     # Signature
     data_aval = data.data_avaliacao or datetime.now().strftime("%d/%m/%Y")
-    sig_s8 = style('Sig', fontSize=8)
-    sig_s9b = style('Sig9', fontSize=9, fontName='Helvetica-Bold')
+    sig_s7 = style('Sig', fontSize=7)
+    sig_s8b = style('Sig8', fontSize=8, fontName='Helvetica-Bold')
     sig_data = [
-        [Paragraph("_" * 42, normal_s), Paragraph("_" * 22, normal_s)],
-        [Paragraph("Nome e assinatura do examinador", sig_s8), Paragraph("Data da avaliação", sig_s8)],
-        [Paragraph(data.examinador or "", sig_s9b), Paragraph(data_aval, sig_s9b)],
-        [Paragraph(f"CRM e RQE: {data.crm or ''}", sig_s8), Paragraph("", sig_s8)],
+        [Paragraph("_" * 48, normal_s), Paragraph("_" * 24, normal_s)],
+        [Paragraph("Nome e assinatura do examinador", sig_s7), Paragraph("Data da avaliação", sig_s7)],
+        [Paragraph(data.examinador or "", sig_s8b), Paragraph(data_aval, sig_s8b)],
+        [Paragraph(f"CRM e RQE: {data.crm or ''}", sig_s7), Paragraph("", sig_s7)],
     ]
-    st = Table(sig_data, colWidths=[12*cm, 5*cm])
+    sig_w = tw - 4*cm
+    st = Table(sig_data, colWidths=[sig_w, 4*cm])
     st.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
     ]))
     story.append(st)
 
