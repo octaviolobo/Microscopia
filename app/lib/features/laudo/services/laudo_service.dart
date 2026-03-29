@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:microlaudo/features/laudo/models/laudo_model.dart';
 import 'package:microlaudo/core/utils/pdf_saver.dart';
 
-const _baseUrl = 'http://10.0.2.2:8000';
+const _baseUrl = 'https://microscopia-production.up.railway.app';
 
 class LaudoService {
   final _dio = Dio(BaseOptions(
