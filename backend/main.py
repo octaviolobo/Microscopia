@@ -1,5 +1,6 @@
 import uuid
 import io
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List
@@ -9,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from supabase import create_client, Client
 
 from PIL import Image as PILImage, ImageDraw
 
@@ -34,6 +36,18 @@ app.add_middleware(
 UPLOADS_DIR = Path("uploads")
 UPLOADS_DIR.mkdir(exist_ok=True)
 
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+STORAGE_BUCKET = "microscopia-uploads"
+
+_supabase: Client | None = None
+
+def get_supabase() -> Client | None:
+    global _supabase
+    if SUPABASE_URL and SUPABASE_SERVICE_KEY and _supabase is None:
+        _supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    return _supabase
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -44,12 +58,18 @@ async def root():
 
 @app.get("/images/{image_id}")
 async def get_image(image_id: str):
+    suffix = Path(image_id).suffix.lower()
+    media_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    media_type = media_map.get(suffix, "image/jpeg")
+    sb = get_supabase()
+    if sb:
+        data = sb.storage.from_(STORAGE_BUCKET).download(image_id)
+        return Response(content=data, media_type=media_type)
+    # Fallback local
     filepath = UPLOADS_DIR / image_id
     if not filepath.exists():
         raise HTTPException(404, "Imagem não encontrada")
-    suffix = filepath.suffix.lower()
-    media_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
-    return FileResponse(str(filepath), media_type=media_map.get(suffix, "image/jpeg"))
+    return FileResponse(str(filepath), media_type=media_type)
 
 
 @app.post("/upload")
@@ -59,12 +79,21 @@ async def upload_image(file: UploadFile = File(...)):
     ext = Path(file.filename).suffix.lower() or ".jpg"
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
         raise HTTPException(400, "Formato inválido. Use JPG ou PNG.")
-    filename = f"{uuid.uuid4()}{ext}"
-    filepath = UPLOADS_DIR / filename
     content = await file.read()
     if len(content) > 20 * 1024 * 1024:
         raise HTTPException(400, "Imagem muito grande (máx 20MB)")
-    filepath.write_bytes(content)
+    filename = f"{uuid.uuid4()}{ext}"
+    sb = get_supabase()
+    if sb:
+        # Salva no Supabase Storage
+        sb.storage.from_(STORAGE_BUCKET).upload(
+            path=filename,
+            file=content,
+            file_options={"content-type": file.content_type},
+        )
+    else:
+        # Fallback local (desenvolvimento)
+        (UPLOADS_DIR / filename).write_bytes(content)
     return {"image_id": filename, "filename": file.filename, "size": len(content)}
 
 
