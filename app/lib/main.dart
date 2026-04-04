@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:microlaudo/core/theme/app_theme.dart';
 import 'package:microlaudo/core/router/app_router.dart';
+import 'package:microlaudo/core/purchases/purchase_service.dart';
 
 const _supabaseUrl = 'https://jynkunhfbvkttpvkvoxi.supabase.co';
 const _supabaseAnonKey =
@@ -16,6 +17,9 @@ void main() async {
     url: _supabaseUrl,
     anonKey: _supabaseAnonKey,
   );
+
+  final userId = Supabase.instance.client.auth.currentUser?.id;
+  await PurchaseService.init(userId);
 
   runApp(const ProviderScope(child: MicroLaudoApp()));
 }

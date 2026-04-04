@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:microlaudo/core/theme/app_theme.dart';
 import 'package:microlaudo/features/laudo/models/laudo_model.dart';
 import 'package:microlaudo/features/laudo/services/laudo_service.dart';
+import 'package:microlaudo/features/laudo/repositories/laudo_repository.dart';
 import 'package:microlaudo/features/laudo/widgets/section_header.dart';
 import 'package:microlaudo/features/laudo/widgets/nugent_row.dart';
 import 'package:microlaudo/features/laudo/widgets/image_picker_section.dart';
@@ -204,9 +205,10 @@ class _NovoLaudoScreenState extends State<NovoLaudoScreen> {
         imageIds: _imageIds,
       );
       await _service.gerarEBaixarPdf(laudo);
+      await LaudoRepository().salvar(laudo);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('PDF gerado — verifique seus downloads!'),
+          content: Text('PDF gerado e laudo salvo!'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ));

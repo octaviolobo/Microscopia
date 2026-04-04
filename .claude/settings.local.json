@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Read(//c/Users/blind/Desktop/microlaudo/lib/**)"
+    ]
+  }
+}

@@ -91,6 +91,72 @@ class LaudoModel {
       };
 }
 
+class LaudoSummary {
+  final String id;
+  final DateTime createdAt;
+  // Campos para exibição
+  final String paciente;
+  final String dataColeta;
+  final int nugentTotal;
+  final String floraTipo;
+  final String conclusao;
+  // Campos completos para re-gerar PDF
+  final LaudoModel model;
+
+  const LaudoSummary({
+    required this.id,
+    required this.createdAt,
+    required this.paciente,
+    required this.dataColeta,
+    required this.nugentTotal,
+    required this.floraTipo,
+    required this.conclusao,
+    required this.model,
+  });
+
+  factory LaudoSummary.fromJson(Map<String, dynamic> j) {
+    final model = LaudoModel(
+      paciente: j['paciente'] as String? ?? '',
+      dataNascimento: j['data_nascimento'] as String? ?? '',
+      dataColeta: j['data_coleta'] as String? ?? '',
+      solicitante: j['solicitante'] as String? ?? '',
+      nugentAQty: j['nugent_a_qty'] as String? ?? '4+',
+      nugentAPts: (j['nugent_a_pts'] as num?)?.toInt() ?? 0,
+      nugentBQty: j['nugent_b_qty'] as String? ?? '0',
+      nugentBPts: (j['nugent_b_pts'] as num?)?.toInt() ?? 0,
+      nugentCQty: j['nugent_c_qty'] as String? ?? '0',
+      nugentCPts: (j['nugent_c_pts'] as num?)?.toInt() ?? 0,
+      nugentTotal: (j['nugent_total'] as num?)?.toInt() ?? 0,
+      nugentInterpretacao: j['nugent_interpretacao'] as String? ?? '',
+      amselCorrimento: j['amsel_corrimento'] as bool? ?? false,
+      amselPh: j['amsel_ph'] as bool? ?? false,
+      amselPhValor: j['amsel_ph_valor'] as String?,
+      amselWhiff: j['amsel_whiff'] as bool? ?? false,
+      amselClueCells: j['amsel_clue_cells'] as bool? ?? false,
+      polimorfonucleares: j['polimorfonucleares'] as String? ?? 'Ausente',
+      elementosFungicos: j['elementos_fungicos'] as String? ?? 'Ausente',
+      descricao: j['descricao'] as String? ?? '',
+      floraTipo: j['flora_tipo'] as String? ?? '',
+      conclusao: j['conclusao'] as String? ?? '',
+      observacoes: j['observacoes'] as String?,
+      examinador: j['examinador'] as String?,
+      crm: j['crm'] as String?,
+      dataAvaliacao: j['data_avaliacao'] as String?,
+      imageIds: (j['image_ids'] as List?)?.cast<String>() ?? [],
+    );
+    return LaudoSummary(
+      id: j['id'] as String,
+      createdAt: DateTime.parse(j['created_at'] as String),
+      paciente: model.paciente,
+      dataColeta: model.dataColeta,
+      nugentTotal: model.nugentTotal,
+      floraTipo: model.floraTipo,
+      conclusao: model.conclusao,
+      model: model,
+    );
+  }
+}
+
 // Nugent scoring helpers
 const nugentAOptions = ['4+', '3+', '2+', '1+', '0'];
 const nugentBOptions = ['0', '1+', '2+', '3+', '4+'];
