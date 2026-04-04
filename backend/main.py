@@ -241,22 +241,38 @@ async def generate_pdf(data: LaudoData):
     story.append(Paragraph("Achados microscópicos:", label_s))
     img_cells = []
     for img_id in data.image_ids[:3]:
-        fp = UPLOADS_DIR / img_id
-        if fp.exists():
-            try:
-                if data.circular_crop:
-                    circ_buf = make_square_crop(fp)
-                    img_size = 3.5*cm
-                    img = RLImage(circ_buf, width=img_size, height=img_size)
-                else:
-                    with PILImage.open(fp) as pil_img:
-                        w, h = pil_img.size
-                    max_w, max_h = 4.0*cm, 3.2*cm
-                    ratio = min(max_w/w, max_h/h)
-                    img = RLImage(str(fp), width=w*ratio, height=h*ratio)
-                img_cells.append(img)
-            except Exception:
-                img_cells.append(Paragraph("", normal_s))
+        try:
+            # Tenta Supabase Storage primeiro, depois fallback local
+            sb = get_supabase()
+            if sb:
+                img_bytes = sb.storage.from_(STORAGE_BUCKET).download(img_id)
+                img_buf = io.BytesIO(img_bytes)
+            else:
+                fp = UPLOADS_DIR / img_id
+                if not fp.exists():
+                    img_cells.append(Paragraph("", normal_s))
+                    continue
+                img_buf = io.BytesIO(fp.read_bytes())
+
+            if data.circular_crop:
+                img_buf.seek(0)
+                tmp_path = UPLOADS_DIR / img_id
+                tmp_path.write_bytes(img_buf.read())
+                circ_buf = make_square_crop(tmp_path)
+                tmp_path.unlink(missing_ok=True)
+                img_size = 3.5*cm
+                img = RLImage(circ_buf, width=img_size, height=img_size)
+            else:
+                img_buf.seek(0)
+                with PILImage.open(img_buf) as pil_img:
+                    w, h = pil_img.size
+                max_w, max_h = 4.0*cm, 3.2*cm
+                ratio = min(max_w/w, max_h/h)
+                img_buf.seek(0)
+                img = RLImage(img_buf, width=w*ratio, height=h*ratio)
+            img_cells.append(img)
+        except Exception:
+            img_cells.append(Paragraph("", normal_s))
     while len(img_cells) < 3:
         img_cells.append(Paragraph("", normal_s))
     icw = (A4[0] - 2.4*cm) / 3
